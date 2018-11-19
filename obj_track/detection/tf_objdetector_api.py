@@ -76,7 +76,7 @@ def tfapi(params):
         if 'frozen_inference_graph.pb' in file_name:
             tar_file.extract(member, os.getcwd())
 
-    # Load a (frozen) Tensorflow model into memory
+    # Load a (frozen) TensorFlow model into memory
     detection_graph = tf.Graph()
     with detection_graph.as_default():
         od_graph_def = tf.GraphDef()
@@ -89,8 +89,6 @@ def tfapi(params):
         PATH_TO_LABELS, use_display_name=True)
     # -----------------------------------------------------------------------#
     # -----------------------------------------------------------------------#
-
-
 
     # -----------------------------------------------------------------------#
     #                  Video Settings, opencv-python                         #
@@ -105,6 +103,7 @@ def tfapi(params):
 
     print('Press [q] to quit demo')
 
+    #if url is not reachable assertion error will be raised
     assert cap.isOpened(), \
         'Cannot capture source'
 
@@ -134,7 +133,8 @@ def tfapi(params):
     #       tensorflow configuration, run the prediction session             #
     # -----------------------------------------------------------------------#
     print('Prediction running')
-    # Running the tensorflow session
+    elapsed = int()
+    # Running the tensorFlow session
     with detection_graph.as_default():
         with tf.Session(graph=detection_graph) as sess:
             while cap.isOpened():
@@ -142,41 +142,43 @@ def tfapi(params):
                 if image_np is None:
                     print('\nEnd of Video')
                     break
-                # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-                image_np_expanded = np.expand_dims(image_np, axis=0)
-                image_tensor = detection_graph.get_tensor_by_name(
-                    'image_tensor:0')
-                # Each box represents a part of the image where a particular object was detected.
-                boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
-                # Each score represent how level of confidence for each of the objects.
-                # Score is shown on the result image, together with the class label.
-                scores = detection_graph.get_tensor_by_name('detection_scores:0')
-                classes = detection_graph.get_tensor_by_name(
-                    'detection_classes:0')
-                num_detections = detection_graph.get_tensor_by_name(
-                    'num_detections:0')
-                # Actual detection.
-                (boxes, scores, classes, num_detections) = sess.run(
-                    [boxes, scores, classes, num_detections],
-                    feed_dict={image_tensor: image_np_expanded})
-                # Visualization of the results of a detection.
-                image_np = vis_util.visualize_boxes_and_labels_on_image_array(
-                    image_np,
-                    np.squeeze(boxes),
-                    np.squeeze(classes).astype(np.int32),
-                    np.squeeze(scores),
-                    category_index,
-                    use_normalized_coordinates=True,
-                    line_thickness=8, min_score_thresh=params['threshold'])
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                font_size = 1e-3 * height
-                font_color = (255,255,255)
-                #image_np = cv2.putText(image_np,json.dumps(json_out), (10,
-                # 20), font, font_size, font_color, 2)
-                if save:
-                    out.write(image_np)
+                elapsed += 1
+                if elapsed % params['num_frames'] ==0:
+                    # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
+                    image_np_expanded = np.expand_dims(image_np, axis=0)
+                    image_tensor = detection_graph.get_tensor_by_name(
+                        'image_tensor:0')
+                    # Each box represents a part of the image where a particular object was detected.
+                    boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
+                    # Each score represent how level of confidence for each of the objects.
+                    # Score is shown on the result image, together with the class label.
+                    scores = detection_graph.get_tensor_by_name('detection_scores:0')
+                    classes = detection_graph.get_tensor_by_name(
+                        'detection_classes:0')
+                    num_detections = detection_graph.get_tensor_by_name(
+                        'num_detections:0')
+                    # Actual detection.
+                    (boxes, scores, classes, num_detections) = sess.run(
+                        [boxes, scores, classes, num_detections],
+                        feed_dict={image_tensor: image_np_expanded})
+                    # Visualization of the results of a detection.
+                    image_np = vis_util.visualize_boxes_and_labels_on_image_array(
+                        image_np,
+                        np.squeeze(boxes),
+                        np.squeeze(classes).astype(np.int32),
+                        np.squeeze(scores),
+                        category_index,
+                        use_normalized_coordinates=True,
+                        line_thickness=8, min_score_thresh=params['threshold'])
+                    # font = cv2.FONT_HERSHEY_SIMPLEX
+                    # font_size = 1e-3 * height
+                    # font_color = (255,255,255)
+                    # image_np = cv2.putText(image_np,json.dumps(json_out),
+                    #                        (10, 20), font, font_size, font_color, 2)
+                    if save:
+                        out.write(image_np)
                 if show:
-                    cv2.imshow('demo', cv2.resize(image_np, (width, height)))
+                    cv2.imshow('demo', image_np)
                     if cv2.waitKey(25) & 0xFF == ord('q'):
                         cv2.destroyAllWindows()
                         cap.release()

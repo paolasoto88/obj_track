@@ -6,5 +6,6 @@
   "show": true,
   "out": "/Users/paola/UA/object_tracking/out/",
   "filename" : "tf_out.avi",
+  "num_frames": 60,
   "threshold": 0.25
 }
