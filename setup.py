@@ -25,7 +25,7 @@ setup(
                       "matplotlib"],
     extras_require={
         "cpu": ["tensorflow==1.10.0"],
-        "gpu": ['tensorflow-gpu==1.10.0']
+        "gpu": ["tensorflow-gpu==1.10.0"]
     },
     scripts=["bin/obj-track.py"],
     classifiers=[

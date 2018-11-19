@@ -1,0 +1,10 @@
+{
+  "base_dir": "/Users/paola/UA/object_tracking/code/models/research/object_detection",
+  "model_name": "ssd_mobilenet_v1_coco_2017_11_17",
+  "dataset": "coco",
+  "save": false,
+  "show": true,
+  "out": "/Users/paola/UA/object_tracking/out/",
+  "filename" : "tf_out.avi",
+  "threshold": 0.25
+}
