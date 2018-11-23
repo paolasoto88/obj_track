@@ -53,32 +53,34 @@ def generate_colors(class_names):
     random.seed(None)  # Reset seed to default.
     return colors
 
-def preprocess_image(capture, model_image_size, fixed_size):
+def preprocess_image(img_path, model_image_size, fixed_size):
+    image_type = imghdr.what(img_path)
+    assert image_type, 'not a valid image file'
+    image = Image.open(img_path)
+
     if fixed_size:  # TODO: When resizing we can use minibatch input.
-        resized_image = cv2.resize(capture, tuple(reversed(
-            model_image_size)), interpolation=cv2.INTER_CUBIC)
+        resized_image = image.resize(
+            tuple(reversed(model_image_size)), Image.BICUBIC)
         image_data = np.array(resized_image, dtype='float32')
     else:
         # Due to skip connection + max pooling in YOLO_v2, inputs must have
         # width and height as multiples of 32.
-        height, width, _ = capture.shape
-        new_image_size = (width - (width % 32),
-                          height - (height % 32))
-        resized_image = cv2.resize(capture, new_image_size,
-                                   interpolation=cv2.INTER_CUBIC)
+        new_image_size = (image.width - (image.width % 32),
+                          image.height - (image.height % 32))
+        resized_image = image.resize(new_image_size, Image.BICUBIC)
         image_data = np.array(resized_image, dtype='float32')
         print(image_data.shape)
 
     image_data /= 255.
     image_data = np.expand_dims(image_data, 0)  # Add batch dimension.
-    return capture, image_data
+    return image, image_data
 
 
 def draw_boxes(image, out_scores, out_boxes, out_classes, class_names, colors):
     font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
-                              size=np.floor(3e-2 * image.shape[1] + 0.5).astype(
+                              size=np.floor(3e-2 * image.size[1] + 0.5).astype(
                                   'int32'))
-    thickness = (image.shape[0] + image.shape[1]) // 300
+    thickness = (image.size[0] + image.size[1]) // 300
 
     for i, c in reversed(list(enumerate(out_classes))):
         predicted_class = class_names[c]
