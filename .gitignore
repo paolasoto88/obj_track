@@ -1,5 +1,9 @@
 *.pyc
 .idea/
-data/
 *.egg-info/
 __pycache__
+*.weights
+*.h5
+*.cfg
+
+.DS_Store

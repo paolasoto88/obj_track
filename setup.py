@@ -11,23 +11,18 @@ setup(
     description="A demo on object tracking",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/paolasoto88/", #complete after done
+    url="https://github.com/paolasoto88/obj_track.git", #complete after done
     packages=find_packages(),
     install_requires=["numpy<=1.14.5,>=1.13.3",
-                      "scipy",
-                      "imutils",
-                      "opencv-python",
-                      "Cython",
-                      "contextlib2",
-                      "pillow",
-                      "lxml",
-                      "jupyter",
-                      "matplotlib"],
+                      "scipy", "imutils", "opencv-python", "Cython",
+                      "contextlib2", "pillow", "lxml", "jupyter", "matplotlib",
+                      "keras", "h5py", "wget"],
     extras_require={
         "cpu": ["tensorflow==1.10.0"],
         "gpu": ["tensorflow-gpu==1.10.0"]
     },
-    scripts=["bin/obj-track.py"],
+    scripts=["bin/obj-track.py",
+             "bin/convert_yad2k.py"],
     classifiers=[
         "Programming Language :: Python :: 3.6.5",
         "License :: OSI Approved :: MIT License",
