@@ -21,7 +21,7 @@ setup(
         "cpu": ["tensorflow==1.10.0"],
         "gpu": ["tensorflow-gpu==1.10.0"]
     },
-    scripts=["bin/obj-track.py",
+    scripts=["bin/obj_track.py",
              "bin/convert_yad2k.py"],
     classifiers=[
         "Programming Language :: Python :: 3.6.5",

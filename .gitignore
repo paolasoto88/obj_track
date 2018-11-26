@@ -5,5 +5,7 @@ __pycache__
 *.weights
 *.h5
 *.cfg
+*_anchors.txt
+*.tar.gz
 
 .DS_Store

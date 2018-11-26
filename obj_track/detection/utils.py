@@ -53,21 +53,18 @@ def generate_colors(class_names):
     random.seed(None)  # Reset seed to default.
     return colors
 
-def preprocess_image(img_path, model_image_size, fixed_size):
-    image_type = imghdr.what(img_path)
-    assert image_type, 'not a valid image file'
-    image = Image.open(img_path)
-
+def preprocess_image(image, model_image_size, fixed_size):
     if fixed_size:  # TODO: When resizing we can use minibatch input.
-        resized_image = image.resize(
-            tuple(reversed(model_image_size)), Image.BICUBIC)
+        resized_image = cv2.resize(image, tuple(reversed(model_image_size)),
+                                   interpolation= cv2.INTER_CUBIC)
         image_data = np.array(resized_image, dtype='float32')
     else:
         # Due to skip connection + max pooling in YOLO_v2, inputs must have
         # width and height as multiples of 32.
-        new_image_size = (image.width - (image.width % 32),
-                          image.height - (image.height % 32))
-        resized_image = image.resize(new_image_size, Image.BICUBIC)
+        height, width, _ = image.shape
+        new_image_size = (width - (width % 32), height - (height % 32))
+        resized_image = cv2.resize(image, new_image_size,
+                                   interpolation=cv2.INTER_CUBIC)
         image_data = np.array(resized_image, dtype='float32')
         print(image_data.shape)
 
@@ -78,9 +75,9 @@ def preprocess_image(img_path, model_image_size, fixed_size):
 
 def draw_boxes(image, out_scores, out_boxes, out_classes, class_names, colors):
     font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
-                              size=np.floor(3e-2 * image.size[1] + 0.5).astype(
+                              size=np.floor(3e-2 * image.shape[0] + 0.5).astype(
                                   'int32'))
-    thickness = (image.size[0] + image.size[1]) // 300
+    thickness = (image.shape[1] + image.shape[0]) // 300
 
     for i, c in reversed(list(enumerate(out_classes))):
         predicted_class = class_names[c]
@@ -89,15 +86,16 @@ def draw_boxes(image, out_scores, out_boxes, out_classes, class_names, colors):
 
         label = '{} {:.2f}'.format(predicted_class, score)
 
-        draw = ImageDraw.Draw(image)
+        image_pil = Image.fromarray(np.uint8(image)).convert('RGB')
+        draw = ImageDraw.Draw(image_pil)
         label_size = draw.textsize(label, font)
 
         top, left, bottom, right = box
         top = max(0, np.floor(top + 0.5).astype('int32'))
         left = max(0, np.floor(left + 0.5).astype('int32'))
-        bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
-        right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-        print(label, (left, top), (right, bottom))
+        bottom = min(image.shape[0], np.floor(bottom + 0.5).astype('int32'))
+        right = min(image.shape[1], np.floor(right + 0.5).astype('int32'))
+        # print(label, (left, top), (right, bottom))
 
         if top - label_size[1] >= 0:
             text_origin = np.array([left, top - label_size[1]])
@@ -111,4 +109,5 @@ def draw_boxes(image, out_scores, out_boxes, out_classes, class_names, colors):
         draw.rectangle([tuple(text_origin), tuple(text_origin + label_size)],
                        fill=colors[c])
         draw.text(text_origin, label, fill=(0, 0, 0), font=font)
+        np.copyto(image, np.array(image_pil))
         del draw
