@@ -7,5 +7,6 @@ __pycache__
 *.cfg
 *_anchors.txt
 *.tar.gz
-
+*.pb
 .DS_Store
+*.tmp

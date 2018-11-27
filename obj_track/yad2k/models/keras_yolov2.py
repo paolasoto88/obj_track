@@ -9,8 +9,8 @@ from keras.layers.merge import concatenate
 from keras.models import Model
 
 from ..utils.utils import compose
-from .keras_darknet19 import (DarknetConv2D, DarknetConv2D_BN_Leaky,
-                              darknet_body)
+from .keras_darknet19 import (DarknetConv2D_v2, DarknetConv2D_BN_Leaky_v2,
+                              darknet_body_v2)
 
 sys.path.append('..')
 
@@ -41,15 +41,15 @@ def space_to_depth_x2_output_shape(input_shape):
                                                     4 * input_shape[3])
 
 
-def yolo_body(inputs, num_anchors, num_classes):
+def yolo_body_v2(inputs, num_anchors, num_classes):
     """Create YOLO_V2 model CNN body in Keras."""
-    darknet = Model(inputs, darknet_body()(inputs))
+    darknet = Model(inputs, darknet_body_v2()(inputs))
     conv20 = compose(
-        DarknetConv2D_BN_Leaky(1024, (3, 3)),
-        DarknetConv2D_BN_Leaky(1024, (3, 3)))(darknet.output)
+        DarknetConv2D_BN_Leaky_v2(1024, (3, 3)),
+        DarknetConv2D_BN_Leaky_v2(1024, (3, 3)))(darknet.output)
 
     conv13 = darknet.layers[43].output
-    conv21 = DarknetConv2D_BN_Leaky(64, (1, 1))(conv13)
+    conv21 = DarknetConv2D_BN_Leaky_v2(64, (1, 1))(conv13)
     # TODO: Allow Keras Lambda to use func arguments for output_shape?
     conv21_reshaped = Lambda(
         space_to_depth_x2,
@@ -57,12 +57,12 @@ def yolo_body(inputs, num_anchors, num_classes):
         name='space_to_depth')(conv21)
 
     x = concatenate([conv21_reshaped, conv20])
-    x = DarknetConv2D_BN_Leaky(1024, (3, 3))(x)
-    x = DarknetConv2D(num_anchors * (num_classes + 5), (1, 1))(x)
+    x = DarknetConv2D_BN_Leaky_v2(1024, (3, 3))(x)
+    x = DarknetConv2D_v2(num_anchors * (num_classes + 5), (1, 1))(x)
     return Model(inputs, x)
 
 
-def yolo_head(feats, anchors, num_classes):
+def yolo_head_v2(feats, anchors, num_classes):
     """Convert final layer features to bounding box parameters.
     Parameters
     ----------
@@ -133,7 +133,7 @@ def yolo_head(feats, anchors, num_classes):
     return box_xy, box_wh, box_confidence, box_class_probs
 
 
-def yolo_boxes_to_corners(box_xy, box_wh):
+def yolo_boxes_to_corners_v2(box_xy, box_wh):
     """Convert YOLO box predictions to bounding box corners."""
     box_mins = box_xy - (box_wh / 2.)
     box_maxes = box_xy + (box_wh / 2.)
@@ -146,7 +146,7 @@ def yolo_boxes_to_corners(box_xy, box_wh):
     ])
 
 
-def yolo_loss(args,
+def yolo_loss_v2(args,
               anchors,
               num_classes,
               rescore_confidence=False,
@@ -184,7 +184,7 @@ def yolo_loss(args,
     no_object_scale = 1
     class_scale = 1
     coordinates_scale = 1
-    pred_xy, pred_wh, pred_confidence, pred_class_prob = yolo_head(
+    pred_xy, pred_wh, pred_confidence, pred_class_prob = yolo_head_v2(
         yolo_output, anchors, num_classes)
 
     # Unadjusted box predictions for loss.
@@ -286,15 +286,15 @@ def yolo_loss(args,
     return total_loss
 
 
-def yolo(inputs, anchors, num_classes):
+def yolo_v2(inputs, anchors, num_classes):
     """Generate a complete YOLO_v2 localization model."""
     num_anchors = len(anchors)
-    body = yolo_body(inputs, num_anchors, num_classes)
-    outputs = yolo_head(body.output, anchors, num_classes)
+    body = yolo_body_v2(inputs, num_anchors, num_classes)
+    outputs = yolo_head_v2(body.output, anchors, num_classes)
     return outputs
 
 
-def yolo_filter_boxes(boxes, box_confidence, box_class_probs, threshold=.6):
+def yolo_filter_boxes_v2(boxes, box_confidence, box_class_probs, threshold=.6):
     """Filter YOLO boxes based on object and class confidence."""
     box_scores = box_confidence * box_class_probs
     box_classes = K.argmax(box_scores, axis=-1)
@@ -308,15 +308,15 @@ def yolo_filter_boxes(boxes, box_confidence, box_class_probs, threshold=.6):
     return boxes, scores, classes
 
 
-def yolo_eval(yolo_outputs,
+def yolo_eval_v2(yolo_outputs,
               image_shape,
               max_boxes=10,
               score_threshold=.6,
               iou_threshold=.0):
     """Evaluate YOLO model on given input batch and return filtered boxes."""
     box_xy, box_wh, box_confidence, box_class_probs = yolo_outputs
-    boxes = yolo_boxes_to_corners(box_xy, box_wh)
-    boxes, scores, classes = yolo_filter_boxes(
+    boxes = yolo_boxes_to_corners_v2(box_xy, box_wh)
+    boxes, scores, classes = yolo_filter_boxes_v2(
         boxes, box_confidence, box_class_probs, threshold=score_threshold)
 
     # Scale boxes back to original image shape.
@@ -337,7 +337,7 @@ def yolo_eval(yolo_outputs,
     return boxes, scores, classes
 
 
-def preprocess_true_boxes(true_boxes, anchors, image_size):
+def preprocess_true_boxes_v2(true_boxes, anchors, image_size):
     """Find detector in YOLO where ground truth box should appear.
     Parameters
     ----------

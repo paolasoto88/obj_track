@@ -10,11 +10,11 @@ import cv2
 from keras import backend as K
 from keras.models import load_model
 
-from ..yad2k.models.keras_yolo import yolo_eval, yolo_head
+from ..yad2k.models.keras_yolov2 import yolo_eval_v2, yolo_head_v2
 from .utils import read_classes, read_anchors, generate_colors, \
     preprocess_image, draw_boxes, get_video_props
 
-def yolo(params):
+def yolo_v2(params):
     """
     Object detection using YOLO implementation in Keras.
 
@@ -89,9 +89,9 @@ def yolo(params):
 
     # Generate output tensor targets for filtered bounding boxes.
     # TODO: Wrap these backend operations with Keras layers.
-    yolo_outputs = yolo_head(yolo_model.output, anchors, len(class_names))
+    yolo_outputs = yolo_head_v2(yolo_model.output, anchors, len(class_names))
     input_image_shape = K.placeholder(shape=(2, ))
-    boxes, scores, classes = yolo_eval(
+    boxes, scores, classes = yolo_eval_v2(
         yolo_outputs,
         input_image_shape,
         score_threshold=0.3,

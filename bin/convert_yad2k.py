@@ -21,7 +21,8 @@ from collections import defaultdict
 import numpy as np
 from keras import backend as K
 from keras.layers import (Conv2D, GlobalAveragePooling2D, Input, Lambda,
-                          MaxPooling2D)
+                          MaxPooling2D, ZeroPadding2D, Add, UpSampling2D,
+                          Concatenate)
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.merge import concatenate
 from keras.layers.normalization import BatchNormalization
@@ -29,7 +30,7 @@ from keras.models import Model
 from keras.regularizers import l2
 from keras.utils.vis_utils import plot_model as plot
 
-from obj_track.yad2k.models.keras_yolo import space_to_depth_x2, \
+from obj_track.yad2k.models.keras_yolov2 import space_to_depth_x2, \
     space_to_depth_x2_output_shape
 
 parser = argparse.ArgumentParser(
@@ -63,6 +64,9 @@ def unique_config_sections(config_file):
 
 # %%
 def _main(args):
+    # todo-paola: delete the following line when executing from root directory
+    os.chdir("..")
+
     # make all dirs needed, run from root
     working_dir = os.getcwd()
     yolo_dir = os.path.join(working_dir, "models", "yolo")
@@ -106,11 +110,21 @@ def _main(args):
     # Load weights and config.
     print('Loading weights.')
     weights_file = open(weights_path, 'rb')
-    weights_header = np.ndarray(
-        shape=(4, ), dtype='int32', buffer=weights_file.read(16))
-    print('Weights Header: ', weights_header)
-    # TODO: Check transpose flag when implementing fully connected layers.
-    # transpose = (weight_header[0] > 1000) or (weight_header[1] > 1000)
+    if yolo_version.endswith('v2'):
+        weights_header = np.ndarray(
+            shape=(4, ), dtype='int32', buffer=weights_file.read(16))
+        print('Weights Header: ', weights_header)
+    else:
+        major, minor, revision = np.ndarray(
+            shape=(3,), dtype='int32', buffer=weights_file.read(12))
+        if (major * 10 + minor) >= 2 and major < 1000 and minor < 1000:
+            seen = np.ndarray(shape=(1,), dtype='int64',
+                              buffer=weights_file.read(8))
+        else:
+            seen = np.ndarray(shape=(1,), dtype='int32',
+                              buffer=weights_file.read(4))
+        print('Weights Header: ', major, minor, revision, seen)
+
 
     print('Parsing Darknet config.')
     unique_config_file = unique_config_sections(config_path)
@@ -123,8 +137,16 @@ def _main(args):
     else:
         image_height = int(cfg_parser['net_0']['height'])
         image_width = int(cfg_parser['net_0']['width'])
-    prev_layer = Input(shape=(image_height, image_width, 3))
-    all_layers = [prev_layer]
+
+
+    if yolo_version.endswith('v2'):
+        prev_layer = Input(shape=(image_height, image_width, 3))
+        all_layers = [prev_layer]
+    else:
+        input_layer = Input(shape=(None, None, 3))
+        prev_layer = input_layer
+        all_layers = []
+        out_index = []
 
     weight_decay = float(cfg_parser['net_0']['decay']
                          ) if 'net_0' in cfg_parser.sections() else 5e-4
@@ -139,8 +161,11 @@ def _main(args):
             activation = cfg_parser[section]['activation']
             batch_normalize = 'batch_normalize' in cfg_parser[section]
 
-            # padding='same' is equivalent to Darknet pad=1
-            padding = 'same' if pad == 1 else 'valid'
+            if yolo_version.endswith('v2'):
+                # padding='same' is equivalent to Darknet pad=1
+                padding = 'same' if pad == 1 else 'valid'
+            else:
+                padding = 'same' if pad == 1 and stride == 1 else 'valid'
 
             # Setting weights.
             # Darknet serializes convolutional weights as:
@@ -202,6 +227,9 @@ def _main(args):
                     'Unknown activation function `{}` in section {}'.format(
                         activation, section))
 
+            if stride > 1:
+                # Darknet uses left and top padding instead of 'same' mode
+                prev_layer = ZeroPadding2D(((1, 0), (1, 0)))(prev_layer)
             # Create Conv2D layer
             conv_layer = (Conv2D(
                 filters, (size, size),
@@ -227,11 +255,8 @@ def _main(args):
         elif section.startswith('maxpool'):
             size = int(cfg_parser[section]['size'])
             stride = int(cfg_parser[section]['stride'])
-            all_layers.append(
-                MaxPooling2D(
-                    padding='same',
-                    pool_size=(size, size),
-                    strides=(stride, stride))(prev_layer))
+            all_layers.append(MaxPooling2D(padding='same', pool_size=
+            (size, size), strides=(stride, stride))(prev_layer))
             prev_layer = all_layers[-1]
 
         elif section.startswith('avgpool'):
@@ -263,6 +288,24 @@ def _main(args):
                     name='space_to_depth_x2')(prev_layer))
             prev_layer = all_layers[-1]
 
+        elif section.startswith('shortcut'):
+            index = int(cfg_parser[section]['from'])
+            activation = cfg_parser[section]['activation']
+            assert activation == 'linear', 'Only linear activation supported.'
+            all_layers.append(Add()([all_layers[index], prev_layer]))
+            prev_layer = all_layers[-1]
+
+        elif section.startswith('upsample'):
+            stride = int(cfg_parser[section]['stride'])
+            assert stride == 2, 'Only stride=2 supported.'
+            all_layers.append(UpSampling2D(stride)(prev_layer))
+            prev_layer = all_layers[-1]
+
+        elif section.startswith('yolo'):
+            out_index.append(len(all_layers) - 1)
+            all_layers.append(None)
+            prev_layer = all_layers[-1]
+
         elif section.startswith('region'):
             with open('{}_anchors.txt'.format(output_root), 'w') as f:
                 print(cfg_parser[section]['anchors'], file=f)
@@ -276,8 +319,18 @@ def _main(args):
                 'Unsupported section header type: {}'.format(section))
 
     # Create and save model.
-    model = Model(inputs=all_layers[0], outputs=all_layers[-1])
+    if len(out_index) == 0: out_index.append(len(all_layers) - 1)
+    if yolo_version.endswith('v2'):
+        model = Model(inputs=all_layers[0], outputs=all_layers[-1])
+    else:
+        model = Model(inputs=input_layer, outputs=[all_layers[i] for i in
+                                                   out_index])
     print(model.summary())
+    # Save model summary in .txt file
+    with open(output_root + '_summary.txt', 'w') as fh:
+        # Pass the file handle in as a lambda function to make it callable
+        model.summary(print_fn=lambda x: fh.write(x + '\n'))
+
     model.save('{}'.format(output_path))
     print('Saved Keras model to {}'.format(output_path))
     # Check to see if all weights have been read.
@@ -287,11 +340,6 @@ def _main(args):
                                                        remaining_weights))
     if remaining_weights > 0:
         print('Warning: {} unused weights'.format(remaining_weights))
-
-    # if args.plot_model:
-    #     plot(model, to_file='{}.png'.format(output_root), show_shapes=True)
-    #     print('Saved model plot to {}.png'.format(output_root))
-
 
 if __name__ == '__main__':
     _main(parser.parse_args())

@@ -1,14 +1,14 @@
 import argparse
 import json
 from obj_track.detection.tf_objdetector_api import tfapi
-from obj_track.detection.yolo_objdetector import yolo
+from obj_track.detection.yolo_v2_objdetector import yolo_v2
 
 if __name__ == "__main__":
     """
     Main function to achieve object tracking in one video feed. Idea taken from 
     https://www.pyimagesearch.com/2018/07/23/simple-object-tracking-with-opencv/
     Run this program like this:
-    - python obj_track.py [OPTIONS]
+    - python obj_detector.py [OPTIONS]
     
     OPTIONS
     -------
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         #todo-paola: add support for yolov3
         #todo-paola: include the convert script -d must include the version
         # of yolo
-        yolo(args)
+        yolo_v2(args)
     else:
         raise ValueError("Object detector type not valid. Valid options: "
                          "tfapi or yolov2")
