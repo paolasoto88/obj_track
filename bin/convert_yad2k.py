@@ -302,6 +302,8 @@ def _main(args):
             prev_layer = all_layers[-1]
 
         elif section.startswith('yolo'):
+            with open('{}_anchors.txt'.format(output_root), 'w') as f:
+                print(cfg_parser[section]['anchors'], file=f)
             out_index.append(len(all_layers) - 1)
             all_layers.append(None)
             prev_layer = all_layers[-1]

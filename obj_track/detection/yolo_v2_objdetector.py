@@ -1,7 +1,7 @@
 """
 Run a YOLO_v2 style detection model on video.
 Modified version of
-https://github.com/allanzelener/YAD2K/blob/master/test_yolo.py
+https://github.com/allanzelener/YAD2K.git
 
 """
 import os
@@ -100,7 +100,7 @@ def yolo_v2(params):
     # -----------------------------------------------------------------------#
 
     # -----------------------------------------------------------------------#
-    #                           Configure Opencv                             #
+    #                           Configure OpenCV                             #
     # -----------------------------------------------------------------------#
     # Get video file
     if file == '0':
@@ -112,7 +112,7 @@ def yolo_v2(params):
     assert cap.isOpened(), 'Cannot capture source'
 
     # todo-paola: add show option to parser
-    show = True
+    show = False
 
     if show:
         cv2.namedWindow('demo', 0)
@@ -129,7 +129,9 @@ def yolo_v2(params):
         video_filename = output_path + '/output.avi'
         out = cv2.VideoWriter(video_filename, fourcc, fps, (width, height))
 
-
+    # -----------------------------------------------------------------------#
+    #                           Run detection with YOLOv2                    #
+    # -----------------------------------------------------------------------#
     while cap.isOpened():
         ret, image = cap.read()
         if image is None:
@@ -154,7 +156,7 @@ def yolo_v2(params):
             out.write(image)
         if show:
             cv2.imshow('demo', image)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
                 cap.release()
                 break

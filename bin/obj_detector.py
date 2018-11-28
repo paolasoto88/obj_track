@@ -2,6 +2,7 @@ import argparse
 import json
 from obj_track.detection.tf_objdetector_api import tfapi
 from obj_track.detection.yolo_v2_objdetector import yolo_v2
+from obj_track.detection.yolo_v3_objdetector import YOLO, yolo_v3
 
 if __name__ == "__main__":
     """
@@ -15,7 +16,7 @@ if __name__ == "__main__":
     -v, --video : specify the path to the video source, 0 for webcam, url for 
     streaming or complete file for video store locally. 
     -d, --detector : choose which of the detectors is used to create bounding 
-    boxes, tfapi for tensorflow, yolov2 for YOLO. 
+    boxes, tfapi for tensorflow, yolov2 or yolov3 for YOLO. 
     -s, --save : specify the path where the predictions are stored.
     -c, --config : path to the config file used by the tensorflow api. 
     """
@@ -44,10 +45,10 @@ if __name__ == "__main__":
         tfapi(tf_params)
     elif args.detector.startswith("yolo"):
         #todo-paola: change args from Namespace to
-        #todo-paola: add support for yolov3
-        #todo-paola: include the convert script -d must include the version
-        # of yolo
-        yolo_v2(args)
+        if args.detector.endswith('v2'):
+            yolo_v2(args)
+        else:
+            yolo_v3(YOLO(**vars(args)), args.video, args.save)
     else:
         raise ValueError("Object detector type not valid. Valid options: "
                          "tfapi or yolov2")

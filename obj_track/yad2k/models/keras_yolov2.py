@@ -8,7 +8,7 @@ from keras.layers import Lambda
 from keras.layers.merge import concatenate
 from keras.models import Model
 
-from ..utils.utils import compose
+from ..utils.utils_yolo_v2 import compose
 from .keras_darknet19 import (DarknetConv2D_v2, DarknetConv2D_BN_Leaky_v2,
                               darknet_body_v2)
 
