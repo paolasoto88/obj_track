@@ -83,7 +83,7 @@ def _main(args):
     config_path = os.path.join(yolo_dir, 'cfg')
     # download the url contents in binary
     # todo-paola: uncomment the following line and delete the hardcoded path
-    print("Downloading .cfg file from {}".format(url))
+    print("Downloading .cfg file from {} to {}".format(url, config_path))
     config_path = wget.download(url, out=config_path)
     #config_path = config_path + '/yolov2.cfg'
 
@@ -92,7 +92,7 @@ def _main(args):
     weights_path = os.path.join(yolo_dir, 'weights')
     # download the url contents in binary format
     # todo-paola: uncomment the following line and delete the hardcoded
-    print("Downloading .weights file from {}".format(url))
+    print("Downloading .weights file from {} to ".format(url, weights_path))
     weights_path = wget.download(url, out=weights_path)
     #weights_path = weights_path + '/yolov2.weights'
 
