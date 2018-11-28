@@ -1,5 +1,6 @@
 import argparse
 import json
+from time import time as timer
 from obj_track.detection.tf_objdetector_api import tfapi
 from obj_track.detection.yolo_v2_objdetector import yolo_v2
 from obj_track.detection.yolo_v3_objdetector import YOLO, yolo_v3
@@ -35,6 +36,7 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
+    start_time = timer()
     if args.detector == "tfapi":
         # todo-paola: implement save option in tf_api
         if not args.config:
@@ -52,3 +54,5 @@ if __name__ == "__main__":
     else:
         raise ValueError("Object detector type not valid. Valid options: "
                          "tfapi or yolov2")
+    elapsed_time = timer() - start_time
+    print("Total elapsed time: {} seconds".format(elapsed_time))

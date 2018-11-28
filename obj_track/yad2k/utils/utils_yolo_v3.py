@@ -18,7 +18,8 @@ def compose_v3(*funcs):
         raise ValueError('Composition of empty sequence not supported.')
 
 def letterbox_image(image, size):
-    '''resize image with unchanged aspect ratio using padding'''
+    '''resize image with unchanged aspect ratio using padding: Gray(128,128,
+    128) ribbon with pillow package'''
     iw, ih = image.size
     w, h = size
     scale = min(w/iw, h/ih)
@@ -30,10 +31,29 @@ def letterbox_image(image, size):
     new_image.paste(image, ((w-nw)//2, (h-nh)//2))
     return new_image
 
+
+def letterbox_image_cv(image, size):
+    '''resize image with unchanged aspect ratio using padding: Gray(128,128,
+        128) ribbon with opencv package'''
+    ih, iw, _ = image.shape
+    w, h = size
+    scale = min(w / iw, h / ih)
+    nw = int(iw * scale)
+    nh = int(ih * scale)
+
+    resized_image = cv2.resize(image, tuple((nw,nh)),
+                               interpolation=cv2.INTER_CUBIC)
+    new_image = np.zeros((h,w,3), dtype='float32')
+    new_image[:] = (128, 128, 128)
+    new_image[(h-nh)//2:(h-nh)//2 + resized_image.shape[0],
+    (w-nw)//2:(w-nw)//2 + resized_image.shape[1]] = resized_image
+    return new_image
+
 def rand(a=0, b=1):
     return np.random.rand()*(b-a) + a
 
-def get_random_data(annotation_line, input_shape, random=True, max_boxes=20, jitter=.3, hue=.1, sat=1.5, val=1.5, proc_img=True):
+def get_random_data(annotation_line, input_shape, random=True, max_boxes=20,
+                    jitter=.3, hue=.1, sat=1.5, val=1.5, proc_img=True):
     '''random preprocessing for real-time data augmentation'''
     line = annotation_line.split()
     image = Image.open(line[0])

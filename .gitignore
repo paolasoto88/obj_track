@@ -10,3 +10,5 @@ __pycache__
 *.pb
 .DS_Store
 *.tmp
+*.ipynb
+*.png
