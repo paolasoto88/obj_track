@@ -216,7 +216,7 @@ def yolo_v3(yolo, video_path, output_path=""):
     # if http address is not reachable assertion error will be raised
     assert vid.isOpened(), "Couldn't open video source"
 
-    video_FourCC = int(vid.get(cv2.CAP_PROP_FOURCC))
+    video_FourCC = cv2.VideoWriter_fourcc(*'XVID')
     video_fps = vid.get(cv2.CAP_PROP_FPS)
     video_size = (int(vid.get(cv2.CAP_PROP_FRAME_WIDTH)),
                   int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT)))
